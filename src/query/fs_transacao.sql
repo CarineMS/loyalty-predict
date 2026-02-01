@@ -2,7 +2,8 @@ WITH tb_transacao AS (
 
     SELECT 
         *,
-        substr(DtCriacao,0,11) DtDia
+        substr(DtCriacao,0,11) DtDia,
+        cast(substr(DtCriacao, 12,2) AS int) AS dtHora
     FROM transacoes
     WHERE DtCriacao < '2026-01-25'
 
@@ -39,7 +40,11 @@ WITH tb_transacao AS (
         SUM(CASE WHEN DtDia > date('2026-01-25', '-7 day') AND QtdePontos < 0 THEN QtdePontos ELSE 0 END) AS qtdePontosNegD7,
         SUM(CASE WHEN DtDia > date('2026-01-25', '-14 day') AND QtdePontos < 0 THEN QtdePontos ELSE 0 END) AS qtdePontosNegD14,
         SUM(CASE WHEN DtDia > date('2026-01-25', '-28 day') AND QtdePontos < 0 THEN QtdePontos ELSE 0 END) AS qtdePontosNegD28,
-        SUM(CASE WHEN DtDia > date('2026-01-25', '-56 day') AND QtdePontos < 0 THEN QtdePontos ELSE 0 END) AS qtdePontosNegD56
+        SUM(CASE WHEN DtDia > date('2026-01-25', '-56 day') AND QtdePontos < 0 THEN QtdePontos ELSE 0 END) AS qtdePontosNegD56,
+
+        1. * COUNT(CASE WHEN dtHora BETWEEN 10 AND 14 THEN IdTransacao END) / COUNT(IdTransacao) AS pctTransacaoManha,
+        1. * COUNT(CASE WHEN dtHora BETWEEN 15 AND 21 THEN IdTransacao END) / COUNT(IdTransacao) AS pctTransacaoTarde,
+        1. * COUNT(CASE WHEN dtHora > 21 OR dtHora < 10 THEN IdTransacao END) / COUNT(IdTransacao) AS pctTransacaoNoite
 
     FROM tb_transacao
     GROUP BY IdCliente
@@ -93,7 +98,7 @@ tb_agg_calc AS (
     FROM tb_lag_dia
     GROUP BY IdCliente
 )
-
+, tb_join as (
 SELECT
     t1.*,
     t2.qtdeHorasVida,
@@ -109,3 +114,10 @@ LEFT JOIN tb_hora_cliente AS t2
     ON t1.IdCliente = t2.IdCliente
 LEFT JOIN tb_invervalo_dias AS t3
     ON t1.IdCliente = t3.IdCliente
+)
+
+SELECT
+    *
+FROM tb_join
+
+limit 10
