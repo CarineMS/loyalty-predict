@@ -12,6 +12,9 @@ WITH tb_transacao AS (
 
     SELECT 
         IdCliente,
+
+        MAX(julianday(date('2026-01-25', '-1 day')) - julianday(DtCriacao)) AS idadeDias,
+
         COUNT(DISTINCT DtDia) AS qtdeAtivacaoVida,
         COUNT(DISTINCT CASE WHEN DtDia > date('2026-01-25', '-7 day') THEN DtDia END) AS qtdeAtivacaoVidaD7,
         COUNT(DISTINCT CASE WHEN DtDia > date('2026-01-25', '-14 day') THEN DtDia END) AS qtdeAtivacaoVidaD14,
@@ -156,6 +159,7 @@ tb_agg_calc AS (
 )
 
 SELECT
+    date('2026-01-25', '-1 day') as dtRef,
     *
 FROM tb_join
 LIMIT 10
