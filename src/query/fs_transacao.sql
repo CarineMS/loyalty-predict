@@ -98,26 +98,64 @@ tb_agg_calc AS (
     FROM tb_lag_dia
     GROUP BY IdCliente
 )
-, tb_join as (
-SELECT
-    t1.*,
-    t2.qtdeHorasVida,
-    t2.qtdeHorasD7,
-    t2.qtdeHorasD14,
-    t2.qtdeHorasD28,
-    t2.qtdeHorasD56,
-    t3.avgIntervalosDiaVida,
-    t3.avgIntervalosDiasD28
+, tb_share_produtos as (
+    SELECT
+        idCliente,
+        1. * COUNT(CASE WHEN DescNomeProduto = 'ChatMessage' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeChatMessage,
+        1. * COUNT(CASE WHEN DescNomeProduto = 'Airflow Lover' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeAirflowLover,
+        1. * COUNT(CASE WHEN DescNomeProduto = 'R Lover' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeRLover,
+        1. * COUNT(CASE WHEN DescNomeProduto = 'Resgatar Ponei' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeResgatarPonei,
+        1. * COUNT(CASE WHEN DescNomeProduto = 'Lista de presença' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeListadepresenca,
+        1. * COUNT(CASE WHEN DescNomeProduto = 'Presença Streak' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdePresencaStreak,
+        1. * COUNT(CASE WHEN DescNomeProduto = 'Troca de Pontos StreamElements' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeTrocaStreamElements,
+        1. * COUNT(CASE WHEN DescNomeProduto = 'Reembolso: Troca de Pontos StreamElements' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeReembolsoStreamElements,
+        1. * COUNT(CASE WHEN DescCategoriaProduto = 'rpg' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeRPG,
+        1. * COUNT(CASE WHEN DescCategoriaProduto = 'churn_model' THEN t1.IdTransacao END) / COUNT(t1.IdTransacao) AS qtdeChurnModel
 
-FROM tb_agg_calc AS t1
-LEFT JOIN tb_hora_cliente AS t2
-    ON t1.IdCliente = t2.IdCliente
-LEFT JOIN tb_invervalo_dias AS t3
-    ON t1.IdCliente = t3.IdCliente
+    FROM tb_transacao t1
+
+    LEFT JOIN transacao_produto as t2
+        ON t1.IdTransacao = t2.IdTransacao
+
+    LEFT JOIN produtos as t3
+        ON t2.IdProduto = t3.IdProduto
+
+    GROUP BY IdCliente
+)
+, tb_join as (
+    SELECT
+        t1.*,
+        t2.qtdeHorasVida,
+        t2.qtdeHorasD7,
+        t2.qtdeHorasD14,
+        t2.qtdeHorasD28,
+        t2.qtdeHorasD56,
+        t3.avgIntervalosDiaVida,
+        t3.avgIntervalosDiasD28,
+        t4.qtdeChatMessage,
+        t4.qtdeAirflowLover,
+        t4.qtdeRLover,
+        t4.qtdeResgatarPonei,
+        t4.qtdeListadepresenca,
+        t4.qtdePresencaStreak,
+        t4.qtdeTrocaStreamElements,
+        t4.qtdeReembolsoStreamElements,
+        t4.qtdeRPG,
+        t4.qtdeChurnModel
+
+    FROM tb_agg_calc AS t1
+
+    LEFT JOIN tb_hora_cliente AS t2
+        ON t1.IdCliente = t2.IdCliente
+    
+    LEFT JOIN tb_invervalo_dias AS t3
+        ON t1.IdCliente = t3.IdCliente
+    
+    LEFT JOIN tb_share_produtos AS t4
+        ON t1.IdCliente = t4.IdCliente
 )
 
 SELECT
     *
 FROM tb_join
-
-limit 10
+LIMIT 10
