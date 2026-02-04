@@ -64,6 +64,11 @@ Começamos do básico, conhecendo os comandos de `bash` no terminal, bem como as
 Confira o material da [apresentação aqui](https://docs.google.com/presentation/d/1a2tlT1-EtM8m_8NPvrU6rGpzFXROl_5e/edit?usp=sharing&ouid=109225010112567180899&rtpof=true&sd=true)
 
 Ao final de cada dia, há um checkbox para você salvar seu progresso durante este curso.";2025
+go-2026;Curso Linguagem Go;"Curso de Go para iniciantes na linguagem com foco em sua sintaxe, exemplos e principais características da linguagem.
+
+Documento completo da apresentação com material de apoio, exemplos e exercícios: https://docs.google.com/presentation/d/1A853kcKhvdhTrXK72xlufd5-wSVjg743HO0T1cuuvuc/edit?usp=sharing
+
+Repositório com código gerado ao decorrer do curso: https://github.com/TeoMeWhy/curso-go-ds";2026
 ia-canal-2025;Uma IA para o canal;"Temos o interesse de tornar a experiência de quem nos acompanha ainda melhor. Para isso, estamos criando um sistema de Inteligência Artificial usando LLM e RAG com um banco vetorizado (QDrant).
 
 A ideia é integrar o no nosso chat da Twitch com esse sistema, respondendo de maneira automática algumas perguntas comuns de nossos participantes.
