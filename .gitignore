@@ -1,0 +1,10 @@
+# env
+.env
+.venv
+
+# data
+*.csv
+*.db
+
+# cache
+__pycache__
