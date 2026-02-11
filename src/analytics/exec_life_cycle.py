@@ -49,35 +49,3 @@ for i in tqdm(dates):
     query_format = query.format(date=i)
     df = pd.read_sql(query_format, engine_app)
     df.to_sql("life_cycle", engine_analytical, index=False, if_exists="append")
-
-# %% VALIDATION TUTORIAL
-
-query_val = read_query("../query/trying_life_cycle.sql")
-df_val = pd.read_sql(query_val, engine_analytical)
-df_val.head()
-
-# %% ploting
-df_pivot = df_val.pivot(index="DtRef", columns="descLifeCycle", values="qtdeCliente")
-
-# Plot
-df_pivot.plot(kind="bar", stacked=True, figsize=(10,5))
-
-plt.title("Clientes por LifeCycle")
-plt.xlabel("Data de Referência")
-plt.ylabel("Quantidade de Clientes")
-plt.legend(title="LifeCycle")
-plt.tight_layout()
-plt.show()
-
-# %%
-df_pct = df_pivot.div(df_pivot.sum(axis=1), axis=0) * 100
-
-# Plot
-df_pct.plot(kind="bar", stacked=True, figsize=(10,5))
-
-plt.title("Clientes por LifeCycle (%)")
-plt.xlabel("Data de Referência")
-plt.ylabel("Percentual (%)")
-plt.legend(title="LifeCycle")
-plt.tight_layout()
-plt.show()
