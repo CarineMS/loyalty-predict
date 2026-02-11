@@ -35,7 +35,7 @@ engine_analytical = sqlalchemy.create_engine("sqlite:///../../data/analytics/dat
 # %% TRANSFER DATA BETWEEN DATABASES
 # LOAD DATA FROM APLICATION.DB AND WRITE TO ANALYTICAL.DB
 
-dates = date_range('2024-03-01', '2026-02-01')
+dates = date_range('2024-09-01', '2025-10-01')
 
 for i in tqdm(dates):
     with engine_analytical.connect() as conn:
