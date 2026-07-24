@@ -1,11 +1,9 @@
 # %% LIBRARY
-
+import argparse
 import datetime
 from tqdm import tqdm
-
 import pandas as pd
 import sqlalchemy
-import matplotlib.pyplot as plt
 
 # %% FUNCTIONS
 
@@ -14,38 +12,54 @@ def read_query(path: str):
         query = open_file.read()
     return query
 
-def date_range(start, stop):
+def date_range(start, stop, monthly=False):
     dates = []
     while start <= stop:
         dates.append(start)
         dt_start = datetime.datetime.strptime(start, '%Y-%m-%d') + datetime.timedelta(days=1)
         start = datetime.datetime.strftime(dt_start, '%Y-%m-%d')
 
+    if monthly:
+        return [i for i in dates if i.endswith('01')]
+
     return dates
 
-# %% READ QUERY
-query = read_query("../query/life_cycle.sql")
+def exec_query(table, db_origin, db_target, dt_start, dt_stop, monthly):
+    engine_app = sqlalchemy.create_engine(f"sqlite:///../../data/{db_origin}/database.db")
+    engine_analytical = sqlalchemy.create_engine(f"sqlite:///../../data/{db_target}/database.db")
 
-# %% CONFIG ENGINE
-# engine - db de aplicação (possibilidade de ser reescrito)
-engine_app = sqlalchemy.create_engine("sqlite:///../../data/loyalty-system/database.db")
-# engine -  db de contexto/aplicação (sumarizando como uma entidade - n está no nivel transacional)
-engine_analytical = sqlalchemy.create_engine("sqlite:///../../data/analytics/database.db")
+    query = read_query(f"../query/{table}.sql")
+    dates = date_range(dt_start, dt_stop, monthly)
 
-# %% TRANSFER DATA BETWEEN DATABASES
-# LOAD DATA FROM APLICATION.DB AND WRITE TO ANALYTICAL.DB
+    for i in tqdm(dates):
+        with engine_analytical.connect() as conn:
+            try:
+                query_delete = f"DELETE FROM {table} WHERE DtRef = date('{i}', '-1 day')"
+                conn.execute(sqlalchemy.text(query_delete))
+                conn.commit()
+            except Exception as e:
+                print(e)
 
-dates = date_range('2024-09-01', '2025-10-01')
+        query_format = query.format(date=i)
+        df = pd.read_sql(query_format, engine_app)
+        df.to_sql(f"{table}", engine_analytical, index=False, if_exists="append")
 
-for i in tqdm(dates):
-    with engine_analytical.connect() as conn:
-        try:
-            query_delete = f"DELETE FROM life_cycle WHERE DtRef = date('{i}', '-1 day')"
-            conn.execute(sqlalchemy.text(query_delete))
-            conn.commit()
-        except Exception as e:
-            print(e)
+def main():
 
-    query_format = query.format(date=i)
-    df = pd.read_sql(query_format, engine_app)
-    df.to_sql("life_cycle", engine_analytical, index=False, if_exists="append")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--db_origin', choices=['loyalty-system','education-plataform', 'analytics'], 
+                        default='loyalty-system')
+    
+    parser.add_argument('--db_target', choices=['analytics'], default='analytics')
+    parser.add_argument('--table', type=str, help="Tabela que será processada com o mesmo nome do arquivo")
+
+    now = datetime.datetime.now().strftime("%Y-%m-%d")
+    parser.add_argument('--start', type=str, default=now)
+    parser.add_argument('--stop', type=str, default=now)
+    parser.add_argument('--monthly', action='store_true')
+    args = parser.parse_args()
+
+    exec_query(args.table, args.db_origin, args.db_target, args.start, args.stop, args.monthly)
+
+if __name__ == "__main__":
+    main()
