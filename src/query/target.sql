@@ -1,4 +1,6 @@
-CREATE TABLE abt_fiel AS
+DROP TABLE IF EXISTS abt_fiel;
+
+CREATE TABLE IF NOT EXISTS abt_fiel AS
 
 WITH tb_join AS (
     SELECT
@@ -144,3 +146,6 @@ WITH tb_join AS (
     LEFT JOIN fs_education AS t4
     ON t1.IdCliente = t4.IdCliente
     AND t1.dtRef = t4.dtRef
+
+    WHERE t3.dtRef IS NOT NULL
+;
