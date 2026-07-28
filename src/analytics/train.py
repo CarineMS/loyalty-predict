@@ -2,6 +2,9 @@
 import pandas as pd
 import sqlalchemy
 
+pd.set_option('display.max_columns', 100)
+pd.set_option('display.max_rows', 100)
+
 from sklearn import model_selection 
 
 # %% CONFIG
@@ -48,4 +51,32 @@ s_nas = s_nas[s_nas>0]
 s_nas
 
 # %%
-df[df['descLifeCycleAtual'].isna()]
+
+# EXPLORE - BIVARIADA
+
+cat_features = ['descLifeCycleAtual', 'descLifeCycleD28']
+num_features = list(set(features) - set(cat_features))
+
+df_train = X_train.copy()
+df_train[target] = y_train.copy()
+
+df_train[num_features] = df_train[num_features].astype(float)
+
+# comparando a mediana de cada grupo, fieis e não fieis
+bivariada = df_train.groupby(target)[num_features].median().T
+
+bivariada['ratio'] = (bivariada[1] + 0.001) / (bivariada[0] + 0.001)
+bivariada.sort_values(by='ratio', ascending=False)
+
+to_remove = bivariada[bivariada['ratio']==1].index.tolist()
+to_remove
+
+for i in to_remove:
+    features.remove(i)
+    num_features.remove(i)
+# %%
+df_train.groupby('descLifeCycleAtual')[target].mean()
+
+
+# %%
+df_train.groupby('descLifeCycleD28')[target].mean()
