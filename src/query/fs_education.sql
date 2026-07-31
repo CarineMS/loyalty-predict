@@ -95,7 +95,7 @@ tb_atividade AS (
 tb_ultima_atividade AS (
     SELECT
         idUsuario,
-        MIN(julianday(date('{date}')) - julianday(dtCriacao)) AS qtdeDiasUltiAtividade
+        MIN(julianday('{date}') - julianday(dtCriacao)) AS qtdeDiasUltiAtividade
     FROM tb_atividade
     GROUP BY idUsuario
 ),
