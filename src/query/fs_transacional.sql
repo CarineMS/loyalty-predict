@@ -162,4 +162,3 @@ SELECT
     date('{date}', '-1 day') as dtRef,
     *
 FROM tb_join
-LIMIT 10
