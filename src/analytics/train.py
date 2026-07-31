@@ -14,7 +14,7 @@ conn = sqlalchemy.create_engine("sqlite:///../../data/analytics/database.db")
 
 # SAMPLE - IMPORT DOS DADOS
 
-df = pd.read_sql("abt_fiel", conn)
+df = pd.read_sql("select * from abt_fiel", conn)
 df.head()
 
 # %%
@@ -117,3 +117,64 @@ X_train_transform = imput_0.fit_transform(X_train_transform)
 X_train_transform = imput_new.fit_transform(X_train_transform)
 X_train_transform = imput_1000.fit_transform(X_train_transform)
 X_train_transform = onehot.fit_transform(X_train_transform)
+# %%
+
+# MODEL - ARVORE DE DECISAO
+
+from sklearn import tree, ensemble
+
+# model = tree.DecisionTreeClassifier(
+#     random_state=42, 
+#     min_samples_split=50
+#     )
+model = ensemble.RandomForestClassifier(
+    random_state=42, 
+    n_estimators=150,
+    n_jobs=-1,
+    min_samples_leaf=60
+    )
+
+model.fit(X_train_transform, y_train)
+# %%
+
+# ASSESS TREINO
+
+from sklearn import metrics
+
+y_pred_train = model.predict(X_train_transform)
+y_proba_train = model.predict_proba(X_train_transform)
+
+acc_train = metrics.accuracy_score(y_train, y_pred_train)
+auc_train = metrics.roc_auc_score(y_train, y_proba_train[:,1])
+
+print("Acurácia Treino:", acc_train)
+print("AUC Treino:", auc_train)
+# %%
+
+# ASSESS TESTE
+
+X_test_transform = drop_features.transform(X_test)
+X_test_transform = imput_0.transform(X_test_transform)
+X_test_transform = imput_new.transform(X_test_transform)
+X_test_transform = imput_1000.transform(X_test_transform)
+X_test_transform = onehot.transform(X_test_transform)
+
+y_pred_test = model.predict(X_test_transform)
+y_proba_test = model.predict_proba(X_test_transform)
+
+acc_test = metrics.accuracy_score(y_test, y_pred_test)
+auc_test = metrics.roc_auc_score(y_test, y_proba_test[:,1])
+print("Acurácia Teste:", acc_test)
+print("AUC Teste:", auc_test)
+
+# %%
+
+# FEAT IMPORTANCE
+
+features_names = X_train_transform.columns.tolist()
+
+features_importance = pd.Series(
+    model.feature_importances_, 
+    index=features_names
+    )
+features_importance.sort_values(ascending=False)
