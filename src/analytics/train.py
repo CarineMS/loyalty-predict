@@ -119,7 +119,7 @@ X_train_transform = imput_1000.fit_transform(X_train_transform)
 X_train_transform = onehot.fit_transform(X_train_transform)
 # %%
 
-# MODEL - ARVORE DE DECISAO
+# MODEL - ARVORE DE DECISAO, RANDOM FOREST
 
 from sklearn import tree, ensemble
 
@@ -133,6 +133,12 @@ model = ensemble.RandomForestClassifier(
     n_jobs=-1,
     min_samples_leaf=60
     )
+
+# model = ensemble.AdaBoostClassifier(
+#     random_state=42, 
+#     n_estimators=150,
+#     learning_rate=0.01
+#     )
 
 model.fit(X_train_transform, y_train)
 # %%
@@ -166,6 +172,26 @@ acc_test = metrics.accuracy_score(y_test, y_pred_test)
 auc_test = metrics.roc_auc_score(y_test, y_proba_test[:,1])
 print("Acurácia Teste:", acc_test)
 print("AUC Teste:", auc_test)
+
+# %%
+
+# ASSESS OOT
+X_oot = df_oot[features]
+y_oot = df_oot[target]
+
+X_oot_transform = drop_features.transform(X_oot)
+X_oot_transform = imput_0.transform(X_oot_transform)
+X_oot_transform = imput_new.transform(X_oot_transform)
+X_oot_transform = imput_1000.transform(X_oot_transform)
+X_oot_transform = onehot.transform(X_oot_transform)
+
+y_pred_oot = model.predict(X_oot_transform)
+y_proba_oot = model.predict_proba(X_oot_transform)
+
+acc_oot = metrics.accuracy_score(y_oot, y_pred_oot)
+auc_oot = metrics.roc_auc_score(y_oot, y_proba_oot[:,1])
+print("Acurácia OOT:", acc_oot)
+print("AUC OOT:", auc_oot)
 
 # %%
 
