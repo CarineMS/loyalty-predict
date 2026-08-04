@@ -4,7 +4,9 @@ import pandas as pd
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.max_rows', 100)
 
-from sklearn import model_selection 
+from sklearn import model_selection, tree, ensemble
+from sklearn import pipeline, metrics
+
 from feature_engine import selection, imputation, encoding
 
 import sqlalchemy
@@ -110,18 +112,9 @@ imput_1000 = imputation.ArbitraryNumberImputer(
 
 onehot = encoding.OneHotEncoder(variables=cat_features)
 
-#  MODIFY - APLICANDO AS TRANSFORMAÇÕES NO DATASET
-
-X_train_transform = drop_features.fit_transform(X_train)
-X_train_transform = imput_0.fit_transform(X_train_transform)
-X_train_transform = imput_new.fit_transform(X_train_transform)
-X_train_transform = imput_1000.fit_transform(X_train_transform)
-X_train_transform = onehot.fit_transform(X_train_transform)
 # %%
 
 # MODEL - ARVORE DE DECISAO, RANDOM FOREST
-
-from sklearn import tree, ensemble
 
 # model = tree.DecisionTreeClassifier(
 #     random_state=42, 
@@ -134,21 +127,29 @@ model = ensemble.RandomForestClassifier(
     min_samples_leaf=60
     )
 
-# model = ensemble.AdaBoostClassifier(
-#     random_state=42, 
-#     n_estimators=150,
-#     learning_rate=0.01
-#     )
-
 model.fit(X_train_transform, y_train)
 # %%
 
-# ASSESS TREINO
+# PIPELINE
 
-from sklearn import metrics
+model_pipeline = pipeline.Pipeline(steps=[
+    ("Remoção de Features", drop_features),
+    ("Imputação de Zeros", imput_0),
+    ("Imputação de Não Usuário", imput_new),
+    ("Imputação de 1000", imput_1000),
+    ("OneHot Encoding", onehot),
+    ("Algoritmo", model)
 
-y_pred_train = model.predict(X_train_transform)
-y_proba_train = model.predict_proba(X_train_transform)
+])
+
+model_pipeline.fit(X_train, y_train)
+
+# %%
+
+# ASSESS METRICS - TREINO
+
+y_pred_train = model_pipeline.predict(X_train)
+y_proba_train = model_pipeline.predict_proba(X_train)
 
 acc_train = metrics.accuracy_score(y_train, y_pred_train)
 auc_train = metrics.roc_auc_score(y_train, y_proba_train[:,1])
@@ -157,39 +158,29 @@ print("Acurácia Treino:", acc_train)
 print("AUC Treino:", auc_train)
 # %%
 
-# ASSESS TESTE
+# ASSESS METRICS - TESTE
 
-X_test_transform = drop_features.transform(X_test)
-X_test_transform = imput_0.transform(X_test_transform)
-X_test_transform = imput_new.transform(X_test_transform)
-X_test_transform = imput_1000.transform(X_test_transform)
-X_test_transform = onehot.transform(X_test_transform)
-
-y_pred_test = model.predict(X_test_transform)
-y_proba_test = model.predict_proba(X_test_transform)
+y_pred_test = model_pipeline.predict(X_test)
+y_proba_test = model_pipeline.predict_proba(X_test)
 
 acc_test = metrics.accuracy_score(y_test, y_pred_test)
 auc_test = metrics.roc_auc_score(y_test, y_proba_test[:,1])
+
 print("Acurácia Teste:", acc_test)
 print("AUC Teste:", auc_test)
 
 # %%
 
-# ASSESS OOT
+# ASSESS METRICS - OOT
 X_oot = df_oot[features]
 y_oot = df_oot[target]
 
-X_oot_transform = drop_features.transform(X_oot)
-X_oot_transform = imput_0.transform(X_oot_transform)
-X_oot_transform = imput_new.transform(X_oot_transform)
-X_oot_transform = imput_1000.transform(X_oot_transform)
-X_oot_transform = onehot.transform(X_oot_transform)
-
-y_pred_oot = model.predict(X_oot_transform)
-y_proba_oot = model.predict_proba(X_oot_transform)
+y_pred_oot = model_pipeline.predict(X_oot)
+y_proba_oot = model_pipeline.predict_proba(X_oot)
 
 acc_oot = metrics.accuracy_score(y_oot, y_pred_oot)
 auc_oot = metrics.roc_auc_score(y_oot, y_proba_oot[:,1])
+
 print("Acurácia OOT:", acc_oot)
 print("AUC OOT:", auc_oot)
 
@@ -197,10 +188,26 @@ print("AUC OOT:", auc_oot)
 
 # FEAT IMPORTANCE
 
-features_names = X_train_transform.columns.tolist()
+features_names = model_pipeline[:-1].transform(X_train.head(1)).columns.tolist()
 
 features_importance = pd.Series(
     model.feature_importances_, 
     index=features_names
     )
 features_importance.sort_values(ascending=False)
+
+# %%
+
+#  ASSETS - PERSISTIR MODELO
+
+model_series = pd.Series(
+    {
+    "model": model_pipeline,
+    "features": X_train.columns.tolist(),
+    "auc_train": auc_train,
+    "auc_test": auc_test,
+    "auc_oot": auc_oot,
+    }
+)
+
+model_series.to_pickle("..\..\data\model\model_fiel.pkl")
