@@ -1,5 +1,7 @@
 # %%
 import pandas as pd
+import sqlalchemy
+import matplotlib.pyplot as plt
 
 pd.set_option('display.max_columns', 100)
 pd.set_option('display.max_rows', 100)
@@ -9,7 +11,10 @@ from sklearn import pipeline, metrics
 
 from feature_engine import selection, imputation, encoding
 
-import sqlalchemy
+import mlflow
+
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment(experiment_id=1)
 
 conn = sqlalchemy.create_engine("sqlite:///../../data/analytics/database.db")
 # %%
@@ -77,7 +82,10 @@ bivariada
 print(df_train.groupby('descLifeCycleAtual')[target].mean())
 
 print(df_train.groupby('descLifeCycleD28')[target].mean())
+
 # %%
+
+# PIPELINE
 
 # MODIFY - DROP
 
@@ -112,77 +120,95 @@ imput_1000 = imputation.ArbitraryNumberImputer(
 
 onehot = encoding.OneHotEncoder(variables=cat_features)
 
-# %%
+# MODEL
 
-# MODEL - ARVORE DE DECISAO, RANDOM FOREST
-
-# model = tree.DecisionTreeClassifier(
-#     random_state=42, 
-#     min_samples_split=50
-#     )
 model = ensemble.RandomForestClassifier(
     random_state=42, 
-    n_estimators=150,
+    n_estimators=400,
     n_jobs=-1,
-    min_samples_leaf=60
+    min_samples_leaf=50
     )
 
-model.fit(X_train_transform, y_train)
-# %%
+with mlflow.start_run() as run:
 
-# PIPELINE
+    mlflow.sklearn.autolog()
 
-model_pipeline = pipeline.Pipeline(steps=[
-    ("Remoção de Features", drop_features),
-    ("Imputação de Zeros", imput_0),
-    ("Imputação de Não Usuário", imput_new),
-    ("Imputação de 1000", imput_1000),
-    ("OneHot Encoding", onehot),
-    ("Algoritmo", model)
+    model_pipeline = pipeline.Pipeline(steps=[
+        ("Remocao de Features", drop_features),
+        ("Imputacao de Zeros", imput_0),
+        ("Imputacao de Nao Usuario", imput_new),
+        ("Imputacao de 1000", imput_1000),
+        ("OneHot Encoding", onehot),
+        ("Algoritmo", model)
+    ])
 
-])
+    model_pipeline.fit(X_train, y_train)
 
-model_pipeline.fit(X_train, y_train)
+    # ASSESS METRICS - TREINO
 
-# %%
+    y_pred_train = model_pipeline.predict(X_train)
+    y_proba_train = model_pipeline.predict_proba(X_train)
 
-# ASSESS METRICS - TREINO
+    acc_train = metrics.accuracy_score(y_train, y_pred_train)
+    auc_train = metrics.roc_auc_score(y_train, y_proba_train[:,1])
 
-y_pred_train = model_pipeline.predict(X_train)
-y_proba_train = model_pipeline.predict_proba(X_train)
+    print("Acuracia Treino:", acc_train)
+    print("AUC Treino:", auc_train)
 
-acc_train = metrics.accuracy_score(y_train, y_pred_train)
-auc_train = metrics.roc_auc_score(y_train, y_proba_train[:,1])
+    # ASSESS METRICS - TESTE
 
-print("Acurácia Treino:", acc_train)
-print("AUC Treino:", auc_train)
-# %%
+    y_pred_test = model_pipeline.predict(X_test)
+    y_proba_test = model_pipeline.predict_proba(X_test)
 
-# ASSESS METRICS - TESTE
+    acc_test = metrics.accuracy_score(y_test, y_pred_test)
+    auc_test = metrics.roc_auc_score(y_test, y_proba_test[:,1])
 
-y_pred_test = model_pipeline.predict(X_test)
-y_proba_test = model_pipeline.predict_proba(X_test)
+    print("Acuracia Teste:", acc_test)
+    print("AUC Teste:", auc_test)
 
-acc_test = metrics.accuracy_score(y_test, y_pred_test)
-auc_test = metrics.roc_auc_score(y_test, y_proba_test[:,1])
+    # ASSESS METRICS - OOT
 
-print("Acurácia Teste:", acc_test)
-print("AUC Teste:", auc_test)
+    X_oot = df_oot[features]
+    y_oot = df_oot[target]
 
-# %%
+    y_pred_oot = model_pipeline.predict(X_oot)
+    y_proba_oot = model_pipeline.predict_proba(X_oot)
 
-# ASSESS METRICS - OOT
-X_oot = df_oot[features]
-y_oot = df_oot[target]
+    acc_oot = metrics.accuracy_score(y_oot, y_pred_oot)
+    auc_oot = metrics.roc_auc_score(y_oot, y_proba_oot[:,1])
 
-y_pred_oot = model_pipeline.predict(X_oot)
-y_proba_oot = model_pipeline.predict_proba(X_oot)
+    print("Acuracia OOT:", acc_oot)
+    print("AUC OOT:", auc_oot)
 
-acc_oot = metrics.accuracy_score(y_oot, y_pred_oot)
-auc_oot = metrics.roc_auc_score(y_oot, y_proba_oot[:,1])
+    mlflow.log_metrics({
+        "acc_train": acc_train,
+        "auc_test": auc_test,
+        "acc_oot": acc_oot,
+        "auc_train": auc_train,
+        "acc_test": acc_test,
+        "auc_oot": auc_oot,
+    })
 
-print("Acurácia OOT:", acc_oot)
-print("AUC OOT:", auc_oot)
+    roc_train = metrics.roc_curve(y_train, y_proba_train[:,1])
+    roc_test = metrics.roc_curve(y_test, y_proba_test[:,1])
+    roc_oot = metrics.roc_curve(y_oot, y_proba_oot[:,1])
+
+    plt.figure(dpi=100)
+
+    plt.plot(roc_train[0], roc_train[1])
+    plt.plot(roc_test[0], roc_test[1])
+    plt.plot(roc_oot[0], roc_oot[1])
+    plt.legend([
+            f"Treino: {auc_train:.4f}", 
+            f"Teste: {auc_test:.4f}", 
+            f"OOT: {auc_oot:.4f}"
+        ])
+    plt.grid(True)
+    plt.title("Curva ROC")
+
+    plt.savefig("curva_roc.png")
+
+    mlflow.log_artifact('curva_roc.png')
 
 # %%
 
@@ -195,19 +221,3 @@ features_importance = pd.Series(
     index=features_names
     )
 features_importance.sort_values(ascending=False)
-
-# %%
-
-#  ASSETS - PERSISTIR MODELO
-
-model_series = pd.Series(
-    {
-    "model": model_pipeline,
-    "features": X_train.columns.tolist(),
-    "auc_train": auc_train,
-    "auc_test": auc_test,
-    "auc_oot": auc_oot,
-    }
-)
-
-model_series.to_pickle("..\..\data\model\model_fiel.pkl")
