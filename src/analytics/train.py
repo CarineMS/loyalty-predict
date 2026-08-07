@@ -120,14 +120,29 @@ imput_1000 = imputation.ArbitraryNumberImputer(
 
 onehot = encoding.OneHotEncoder(variables=cat_features)
 
-# MODEL
+# MODEL - ALGORITMO
 
 model = ensemble.RandomForestClassifier(
     random_state=42, 
     n_estimators=400,
-    n_jobs=-1,
-    min_samples_leaf=50
+    min_samples_leaf=50,
+    n_jobs=2,
     )
+
+params = {
+    "n_estimators": [100,200,400,500,1000],
+    "min_samples_leaf": [10,20,30,50,75,100]
+}
+
+grid = model_selection.GridSearchCV(
+    model,
+    param_grid=params,
+    cv=3,
+    scoring='roc_auc',
+    refit=True,
+    verbose=3,
+    n_jobs=10
+)
 
 with mlflow.start_run() as run:
 
