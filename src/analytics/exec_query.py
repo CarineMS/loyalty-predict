@@ -4,6 +4,12 @@ import datetime
 from tqdm import tqdm
 import pandas as pd
 import sqlalchemy
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = BASE_DIR / "data"
+QUERY_DIR = BASE_DIR / "src" / "query"
+
 
 # %% FUNCTIONS
 
@@ -25,10 +31,18 @@ def date_range(start, stop, monthly=False):
     return dates
 
 def exec_query(table, db_origin, db_target, dt_start, dt_stop, monthly):
-    engine_app = sqlalchemy.create_engine(f"sqlite:///../../data/{db_origin}/database.db")
-    engine_analytical = sqlalchemy.create_engine(f"sqlite:///../../data/{db_target}/database.db")
+    # engine_app = sqlalchemy.create_engine(f"sqlite:///../../data/{db_origin}/database.db")
+    # engine_analytical = sqlalchemy.create_engine(f"sqlite:///../../data/{db_target}/database.db")
+    engine_app = sqlalchemy.create_engine(
+        f"sqlite:///{DATA_DIR / db_origin / 'database.db'}"
+    )
 
-    query = read_query(f"../query/{table}.sql")
+    engine_analytical = sqlalchemy.create_engine(
+        f"sqlite:///{DATA_DIR / db_target / 'database.db'}"
+    )
+
+    query_path = QUERY_DIR / f"{table}.sql"
+    query = read_query(query_path)
     dates = date_range(dt_start, dt_stop, monthly)
 
     for i in tqdm(dates):
