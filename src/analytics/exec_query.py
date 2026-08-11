@@ -30,9 +30,7 @@ def date_range(start, stop, monthly=False):
 
     return dates
 
-def exec_query(table, db_origin, db_target, dt_start, dt_stop, monthly):
-    # engine_app = sqlalchemy.create_engine(f"sqlite:///../../data/{db_origin}/database.db")
-    # engine_analytical = sqlalchemy.create_engine(f"sqlite:///../../data/{db_target}/database.db")
+def exec_query(table, db_origin, db_target, dt_start, dt_stop, monthly, mode='append'):
     engine_app = sqlalchemy.create_engine(
         f"sqlite:///{DATA_DIR / db_origin / 'database.db'}"
     )
@@ -56,7 +54,7 @@ def exec_query(table, db_origin, db_target, dt_start, dt_stop, monthly):
 
         query_format = query.format(date=i)
         df = pd.read_sql(query_format, engine_app)
-        df.to_sql(f"{table}", engine_analytical, index=False, if_exists="append")
+        df.to_sql(f"{table}", engine_analytical, index=False, if_exists=mode)
 
 def main():
 
