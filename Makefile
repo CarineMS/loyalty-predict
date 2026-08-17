@@ -1,15 +1,24 @@
 CONDA_ENV=loyalty-predict
 
-.PHONY: setup run all
-
+.PHONY: setup
 setup:
 	@echo "Instalando dependências..."
 	conda run -n $(CONDA_ENV) pip install -r requirements.txt
 
-run:
+.PHONY: collect
+collect:
 	@echo "Executando scripts de engenharia..."
 	conda run -n $(CONDA_ENV) python src/engineering/get_data.py
-	@echo "Executando pipeline de analytics..."
+
+.PHONY: etl
+etl:	
+	@echo "Executando pipeline de feature store..."
 	conda run -n $(CONDA_ENV) python src/analytics/pipeline_analytics.py
 
-all: setup run
+.PHONY: predict
+predict:
+	@echo "Executando script de predição..."
+	cd src/analytics && conda run -n $(CONDA_ENV) python predict_fiel.py
+
+.PHONY: all
+all: setup collect etl predict

@@ -16,9 +16,11 @@ last_version = max([int(i.version) for i in versions])
 model = mlflow.sklearn.load_model(f"models:///model_fiel/{last_version}")
 
 # %%
-data = pd.read_sql("SELECT * FROM abt_fiel", conn)
-
+data = pd.read_sql("SELECT * FROM fs_all", conn)
 predict = model.predict_proba(data[model.feature_names_in_])[:,1]
+data['predictFiel'] = predict
 
-data['predict'] = predict
-data
+data = data[['dtRef','IdCliente','predictFiel']]
+
+# %%
+data.to_sql("score_fiel", conn, index=False, if_exists='replace')
